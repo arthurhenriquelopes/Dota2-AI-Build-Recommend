@@ -75,13 +75,18 @@ function App() {
                     key={p}
                     onClick={() => setPosition(p)}
                     className={cn(
-                      "px-2 py-1 text-xs rounded border transition-all font-mono",
+                      "p-1 rounded border transition-all flex items-center justify-center",
                       position === p
-                        ? "bg-emerald-600 border-emerald-500 text-white"
-                        : "bg-slate-800 border-slate-700 text-slate-500 hover:bg-slate-700"
+                        ? "bg-emerald-900/50 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                        : "bg-slate-800 border-slate-700 opacity-50 hover:opacity-100 hover:bg-slate-700"
                     )}
+                    title={`Position ${p.replace("P", "")}`}
                   >
-                    {p}
+                    <img
+                      src={`https://dota2protracker.com/static/pos/pos_${p.replace("P", "")}.png`}
+                      alt={p}
+                      className="w-6 h-6 object-contain"
+                    />
                   </button>
                 ))}
               </div>

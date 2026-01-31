@@ -1,7 +1,7 @@
 use crate::models::{BuildRecommendation, BuildRequest};
 use serde_json::json;
-use std::env;
 
+#[allow(dead_code)]
 pub struct ManusClient {
     api_key: String,
     base_url: String,
@@ -17,7 +17,7 @@ impl ManusClient {
     }
 
     pub async fn recommend_build(&self, request: &BuildRequest) -> Result<BuildRecommendation, String> {
-        let client = reqwest::Client::new();
+        let _client = reqwest::Client::new();
         
         let prompt = format!(
             "Recommend a Dota 2 item build for {} playing pos {}. \

@@ -9,55 +9,71 @@ pub struct ManusClient {
 
 impl ManusClient {
     pub fn new(api_key: String) -> Self {
-        // Default to a placeholder URL if not specified, assuming a standard OpenAI-compatible or specific endpoint
         ManusClient {
             api_key,
-            base_url: "https://api.manus.im/v1".to_string(), // Hypothetical endpoint based on context
+            base_url: "https://api.manus.im/v1".to_string(),
         }
     }
 
     pub async fn recommend_build(&self, request: &BuildRequest) -> Result<BuildRecommendation, String> {
-        let _client = reqwest::Client::new();
+        let client = reqwest::Client::new();
         
         let prompt = format!(
-            "Recommend a Dota 2 item build for {} playing pos {}. \
-            Allies: {:?}. Enemies: {:?}. \
-            Return JSON with 'item_build' (list of {{'item_name', 'reasoning', 'icon_url'}}) and 'reasoning' (summary).",
-            request.user_hero, request.user_position, request.allies, request.enemies
+            "Recommend a Dota 2 item build for **{}** (Position {}). \
+            \n\n**Context:**\n- Allies: {}\n- Enemies: {}\n\n\
+            Return a valid JSON object with the following structure:\n\
+            {{\n  \"item_build\": [\n    {{ \"item_name\": \"Item Name\", \"reasoning\": \"Why this item?\", \"icon_url\": null }}\n  ],\n  \"reasoning\": \"Overall strategy summary.\"\n}}\n\
+            Note: For 'icon_url', return null (the frontend handles icons). Provide 4-6 key items.",
+            request.user_hero, 
+            request.user_position, 
+            request.allies.join(", "), 
+            request.enemies.join(", ")
         );
 
-        // Hypothetical payload structure for Manus AI
         let payload = json!({
-            "model": "manus-1", // Hypothetical model name
+            "model": "manus-1", // Using manus-1 as the model identifier
             "messages": [
-                {"role": "system", "content": "You are a professional Dota 2 coach."},
+                {"role": "system", "content": "You are a professional high-MMR Dota 2 coach. You optimize builds for specific matchups. Return ONLY JSON."},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            "temperature": 0.7
         });
 
-        // Current implementation is a stub until we have the real endpoint
-        // For now, we'll return a mock response to unblock UI development
-        // In a real scenario, we would `client.post(...).send().await?`
-        
-        println!("Sending request to Manus AI: {:?}", payload);
+        println!("Sending request to Manus AI...");
 
-        // Simulate network delay
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        let response = client
+            .post(format!("{}/chat/completions", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
 
-        Ok(BuildRecommendation {
-            item_build: vec![
-                crate::models::ItemRecommendation {
-                    item_name: "Power Treads".to_string(),
-                    reasoning: "Core boots for attack speed.".to_string(),
-                    icon_url: None,
-                },
-                crate::models::ItemRecommendation {
-                    item_name: "Battle Fury".to_string(),
-                    reasoning: "Accelerate farm.".to_string(),
-                    icon_url: None,
-                }
-            ],
-            reasoning: "This build focuses on farming efficiency.".to_string()
-        })
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("API Error: {}", error_text));
+        }
+
+        let response_json: serde_json::Value = response.json().await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        // Extract content from OpenAI-compatible response format
+        let content = response_json["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or("Invalid response format: missing content")?;
+
+        // Clean up code blocks if present (markdown json)
+        let clean_content = content
+            .trim()
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+
+        let recommendation: BuildRecommendation = serde_json::from_str(clean_content)
+            .map_err(|e| format!("Failed to parse JSON content: {}. Content: {}", e, clean_content))?;
+
+        Ok(recommendation)
     }
 }

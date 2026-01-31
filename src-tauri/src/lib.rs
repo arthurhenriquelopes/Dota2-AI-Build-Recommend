@@ -7,7 +7,7 @@ use manus_client::ManusClient;
 #[tauri::command]
 async fn recommend_build(request: BuildRequest) -> Result<BuildRecommendation, String> {
     // In a real app, API Key should be from env or settings
-    let api_key = "placeholder_key".to_string(); 
+    let api_key = "sk-iUNn-sfxKdBn2iwWEZgL0F1myTNkNQRD9T1S6Bn8Ds3jpi2XkGdqK-o0nMSZT0MAZeJAttBQaK6a-FInzTPOdo8vvYQF".to_string(); 
     let client = ManusClient::new(api_key);
     client.recommend_build(&request).await
 }
